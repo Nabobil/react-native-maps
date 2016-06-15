@@ -61,7 +61,7 @@ public class AirMapView
     private boolean paused = false;
 
     private ThemedReactContext context;
-    
+
     final EventDispatcher eventDispatcher;
 
 
@@ -231,6 +231,9 @@ public class AirMapView
     }
 
     public void setRegion(ReadableMap region) {
+        if (!checkReady()) {
+            return;
+        }
         if (region == null) return;
 
         Double lng = region.getDouble("longitude");
@@ -334,6 +337,9 @@ public class AirMapView
     }
 
     public void updateExtraData(Object extraData) {
+        if (!checkReady()) {
+            return;
+        }
         // if boundsToMove is not null, we now have the MapView's width/height, so we can apply
         // a proper camera move
         if (boundsToMove != null) {
@@ -353,16 +359,25 @@ public class AirMapView
     }
 
     public void animateToRegion(LatLngBounds bounds, int duration) {
+        if (!checkReady()) {
+            return;
+        }
         startMonitoringRegion();
         map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0), duration, null);
     }
 
     public void animateToCoordinate(LatLng coordinate, int duration) {
+        if (!checkReady()) {
+            return;
+        }
         startMonitoringRegion();
         map.animateCamera(CameraUpdateFactory.newLatLng(coordinate), duration, null);
     }
 
     public void fitToElements(boolean animated) {
+        if (!checkReady()) {
+            return;
+        }
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
         for (AirMapFeature feature : features) {
             if (feature instanceof AirMapMarker) {
@@ -477,5 +492,16 @@ public class AirMapView
         AirMapMarker markerView = markerMap.get(marker);
         event = makeClickEventData(marker.getPosition());
         manager.pushEvent(markerView, "onDragEnd", event);
+    }
+
+    /**
+     * Checks if the map is ready (which depends on whether the Google Play services APK is
+     * available. This should be called prior to calling any methods on GoogleMap.
+     */
+    private boolean checkReady() {
+        if (map == null) {
+            return false;
+        }
+        return true;
     }
 }
