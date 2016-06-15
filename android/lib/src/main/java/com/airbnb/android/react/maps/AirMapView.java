@@ -272,6 +272,7 @@ public class AirMapView extends MapView implements GoogleMap.InfoWindowAdapter,
     }
 
     public void setRegion(ReadableMap region) {
+        if (!checkReady()) return;
         if (region == null) return;
 
         Double lng = region.getDouble("longitude");
@@ -460,16 +461,20 @@ public class AirMapView extends MapView implements GoogleMap.InfoWindowAdapter,
     }
 
     public void animateToRegion(LatLngBounds bounds, int duration) {
+        if (!checkReady()) return;
         startMonitoringRegion();
         map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0), duration, null);
     }
 
     public void animateToCoordinate(LatLng coordinate, int duration) {
+        if (!checkReady()) return;
         startMonitoringRegion();
         map.animateCamera(CameraUpdateFactory.newLatLng(coordinate), duration, null);
     }
 
     public void fitToElements(boolean animated) {
+        if (!checkReady()) return;
+
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
         for (AirMapFeature feature : features) {
             if (feature instanceof AirMapMarker) {
@@ -679,5 +684,13 @@ public class AirMapView extends MapView implements GoogleMap.InfoWindowAdapter,
         LatLng coords = this.map.getProjection().fromScreenLocation(point);
         WritableMap event = makeClickEventData(coords);
         manager.pushEvent(this, "onPanDrag", event);
+    }
+
+    /**
+     * Checks if the map is ready (which depends on whether the Google Play services APK is
+     * available. This should be called prior to calling any methods on GoogleMap.
+     */
+    private boolean checkReady() {
+        return map != null;
     }
 }
