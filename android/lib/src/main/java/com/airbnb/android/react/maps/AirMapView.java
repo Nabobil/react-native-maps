@@ -135,7 +135,7 @@ public class AirMapView extends MapView implements GoogleMap.InfoWindowAdapter,
         onLayoutChangeListener = new OnLayoutChangeListener() {
             @Override public void onLayoutChange(View v, int left, int top, int right, int bottom,
                 int oldLeft, int oldTop, int oldRight, int oldBottom) {
-                if (!AirMapView.this.paused) {
+                if (!paused) {
                     AirMapView.this.cacheView();
                 }
             }
@@ -236,7 +236,7 @@ public class AirMapView extends MapView implements GoogleMap.InfoWindowAdapter,
         // updating location constantly, killing the battery, even though some other location-mgmt
         // module may
         // desire to shut-down location-services.
-        lifecycleListener = new LifecycleEventListener() {
+        LifecycleEventListener lifecycleListener = new LifecycleEventListener() {
             @Override
             public void onHostResume() {
                 if (hasPermissions()) {
@@ -255,15 +255,11 @@ public class AirMapView extends MapView implements GoogleMap.InfoWindowAdapter,
                     //noinspection MissingPermission
                     map.setMyLocationEnabled(false);
                 }
-                synchronized (AirMapView.this) {
-                    AirMapView.this.onPause();
-                    paused = true;
-                }
+                paused = true;
             }
 
             @Override
             public void onHostDestroy() {
-                AirMapView.this.doDestroy();
             }
         };
 
@@ -273,20 +269,6 @@ public class AirMapView extends MapView implements GoogleMap.InfoWindowAdapter,
     private boolean hasPermissions() {
         return checkSelfPermission(getContext(), PERMISSIONS[0]) == PackageManager.PERMISSION_GRANTED ||
                 checkSelfPermission(getContext(), PERMISSIONS[1]) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    /*
-    onDestroy is final method so I can't override it.
-     */
-    public synchronized void doDestroy() {
-        if (lifecycleListener != null) {
-            context.removeLifecycleEventListener(lifecycleListener);
-            lifecycleListener = null;
-        }
-        if (!paused) {
-            onPause();
-        }
-        onDestroy();
     }
 
     public void setRegion(ReadableMap region) {
