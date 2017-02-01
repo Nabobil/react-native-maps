@@ -135,7 +135,7 @@ public class AirMapView extends MapView implements GoogleMap.InfoWindowAdapter,
         onLayoutChangeListener = new OnLayoutChangeListener() {
             @Override public void onLayoutChange(View v, int left, int top, int right, int bottom,
                 int oldLeft, int oldTop, int oldRight, int oldBottom) {
-                if (!AirMapView.this.paused) {
+                if (!paused) {
                     AirMapView.this.cacheView();
                 }
             }
@@ -236,7 +236,7 @@ public class AirMapView extends MapView implements GoogleMap.InfoWindowAdapter,
         // updating location constantly, killing the battery, even though some other location-mgmt
         // module may
         // desire to shut-down location-services.
-        lifecycleListener = new LifecycleEventListener() {
+        LifecycleEventListener lifecycleListener = new LifecycleEventListener() {
             @Override
             public void onHostResume() {
                 if (hasPermissions()) {
@@ -255,15 +255,11 @@ public class AirMapView extends MapView implements GoogleMap.InfoWindowAdapter,
                     //noinspection MissingPermission
                     map.setMyLocationEnabled(false);
                 }
-                synchronized (AirMapView.this) {
-                    AirMapView.this.onPause();
-                    paused = true;
-                }
+                paused = true;
             }
 
             @Override
             public void onHostDestroy() {
-                AirMapView.this.doDestroy();
             }
         };
 
@@ -275,21 +271,8 @@ public class AirMapView extends MapView implements GoogleMap.InfoWindowAdapter,
                 checkSelfPermission(getContext(), PERMISSIONS[1]) == PackageManager.PERMISSION_GRANTED;
     }
 
-    /*
-    onDestroy is final method so I can't override it.
-     */
-    public synchronized void doDestroy() {
-        if (lifecycleListener != null) {
-            context.removeLifecycleEventListener(lifecycleListener);
-            lifecycleListener = null;
-        }
-        if (!paused) {
-            onPause();
-        }
-        onDestroy();
-    }
-
     public void setRegion(ReadableMap region) {
+        if (!checkReady()) return;
         if (region == null) return;
 
         Double lng = region.getDouble("longitude");
@@ -478,16 +461,20 @@ public class AirMapView extends MapView implements GoogleMap.InfoWindowAdapter,
     }
 
     public void animateToRegion(LatLngBounds bounds, int duration) {
+        if (!checkReady()) return;
         startMonitoringRegion();
         map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0), duration, null);
     }
 
     public void animateToCoordinate(LatLng coordinate, int duration) {
+        if (!checkReady()) return;
         startMonitoringRegion();
         map.animateCamera(CameraUpdateFactory.newLatLng(coordinate), duration, null);
     }
 
     public void fitToElements(boolean animated) {
+        if (!checkReady()) return;
+
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
         for (AirMapFeature feature : features) {
             if (feature instanceof AirMapMarker) {
@@ -697,5 +684,13 @@ public class AirMapView extends MapView implements GoogleMap.InfoWindowAdapter,
         LatLng coords = this.map.getProjection().fromScreenLocation(point);
         WritableMap event = makeClickEventData(coords);
         manager.pushEvent(this, "onPanDrag", event);
+    }
+
+    /**
+     * Checks if the map is ready (which depends on whether the Google Play services APK is
+     * available. This should be called prior to calling any methods on GoogleMap.
+     */
+    private boolean checkReady() {
+        return map != null;
     }
 }
